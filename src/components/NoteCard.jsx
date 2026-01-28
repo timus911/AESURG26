@@ -1,9 +1,54 @@
 import React, { useState } from 'react';
-import { Play, FileText, ExternalLink, X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { Play, FileText, ExternalLink, X, ChevronLeft, ChevronRight, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 
 const NoteCard = ({ note }) => {
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // Zoom & Pan State
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+    const handleZoomIn = (e) => {
+        e.stopPropagation();
+        setZoomLevel(prev => Math.min(prev + 0.5, 4));
+    };
+
+    const handleZoomOut = (e) => {
+        e.stopPropagation();
+        setZoomLevel(prev => {
+            const newZoom = Math.max(prev - 0.5, 1);
+            if (newZoom === 1) setPanPosition({ x: 0, y: 0 });
+            return newZoom;
+        });
+    };
+
+    const handleMouseDown = (e) => {
+        if (zoomLevel > 1) {
+            e.preventDefault();
+            setIsDragging(true);
+            setDragStart({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
+        }
+    };
+
+    const handleMouseMove = (e) => {
+        if (isDragging && zoomLevel > 1) {
+            e.preventDefault();
+            setPanPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+        }
+    };
+
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    // Reset Zoom on image change
+    React.useEffect(() => {
+        setZoomLevel(1);
+        setPanPosition({ x: 0, y: 0 });
+    }, [currentImageIndex, lightboxOpen]);
 
     // Flatten all media for the lightbox (blocks + gallery)
     const allMedia = React.useMemo(() => {
@@ -71,6 +116,11 @@ const NoteCard = ({ note }) => {
     const isVideo = (filename) => filename && filename.endsWith('.mp4');
     const isMedicalFile = (filename) => filename && filename.endsWith('.pdf');
 
+    // Helper to get correct path for both local and production
+    const getAssetPath = (filename) => {
+        return `${import.meta.env.BASE_URL}images/conference/${filename}`;
+    };
+
     return (
         <>
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6 transition-all hover:shadow-md">
@@ -120,7 +170,7 @@ const NoteCard = ({ note }) => {
                                             {isVideo(block.file) ? (
                                                 <div className="relative">
                                                     <video
-                                                        src={`/images/conference/${block.file}`}
+                                                        src={getAssetPath(block.file)}
                                                         className="w-full h-auto max-h-96 object-contain bg-black rounded-md"
                                                         controls={false}
                                                     />
@@ -132,7 +182,7 @@ const NoteCard = ({ note }) => {
                                                 </div>
                                             ) : isMedicalFile(block.file) ? (
                                                 <a
-                                                    href={`/images/conference/${block.file}`}
+                                                    href={getAssetPath(block.file)}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="flex items-center gap-3 p-3 bg-white rounded border border-slate-200 hover:bg-slate-50 transition-colors"
@@ -145,7 +195,7 @@ const NoteCard = ({ note }) => {
                                             ) : (
                                                 <div className="relative aspect-[16/9] w-full bg-slate-200">
                                                     <img
-                                                        src={`/images/conference/${block.file}`}
+                                                        src={getAssetPath(block.file)}
                                                         alt="Clinical reference"
                                                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                         loading="lazy"
@@ -197,7 +247,7 @@ const NoteCard = ({ note }) => {
                                             </div>
                                         ) : (
                                             <img
-                                                src={`/images/conference/${mediaFile}`}
+                                                src={getAssetPath(mediaFile)}
                                                 alt={`Gallery ${idx + 1}`}
                                                 className="w-full h-full object-cover"
                                                 loading="lazy"
@@ -213,14 +263,36 @@ const NoteCard = ({ note }) => {
 
             {/* Lightbox / Video Player Modal */}
             {lightboxOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setLightboxOpen(false)}>
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+                    onClick={() => setLightboxOpen(false)}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                >
 
-                    <button
-                        onClick={() => setLightboxOpen(false)}
-                        className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50"
-                    >
-                        <X size={32} />
-                    </button>
+                    {/* Controls */}
+                    <div className="absolute top-4 right-4 flex gap-4 z-50">
+                        <button
+                            onClick={handleZoomIn}
+                            className="text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                            title="Zoom In"
+                        >
+                            <ZoomIn size={24} />
+                        </button>
+                        <button
+                            onClick={handleZoomOut}
+                            className="text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                            title="Zoom Out"
+                        >
+                            <ZoomOut size={24} />
+                        </button>
+                        <button
+                            onClick={() => setLightboxOpen(false)}
+                            className="text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                        >
+                            <X size={32} />
+                        </button>
+                    </div>
 
                     <button
                         onClick={prevImage}
@@ -236,11 +308,14 @@ const NoteCard = ({ note }) => {
                         <ChevronRight size={40} />
                     </button>
 
-                    <div className="max-w-[90vw] max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className="max-w-[90vw] max-h-[90vh] flex flex-col items-center overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         {isVideo(allMedia[currentImageIndex]) ? (
                             <video
                                 key={allMedia[currentImageIndex]}
-                                src={`/images/conference/${allMedia[currentImageIndex]}`}
+                                src={getAssetPath(allMedia[currentImageIndex])}
                                 className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
                                 controls
                                 autoPlay
@@ -250,7 +325,7 @@ const NoteCard = ({ note }) => {
                                 <FileText size={48} className="mx-auto text-blue-600 mb-4" />
                                 <p className="text-lg font-medium mb-4">{allMedia[currentImageIndex]}</p>
                                 <a
-                                    href={`/images/conference/${allMedia[currentImageIndex]}`}
+                                    href={getAssetPath(allMedia[currentImageIndex])}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
@@ -260,9 +335,15 @@ const NoteCard = ({ note }) => {
                             </div>
                         ) : (
                             <img
-                                src={`/images/conference/${allMedia[currentImageIndex]}`}
+                                src={getAssetPath(allMedia[currentImageIndex])}
                                 alt="Full view"
-                                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl transition-transform duration-200 ease-out"
+                                style={{
+                                    transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
+                                    cursor: zoomLevel > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
+                                }}
+                                onMouseDown={handleMouseDown}
+                                draggable={false}
                             />
                         )}
                         <p className="text-white/60 mt-4 text-sm font-medium">

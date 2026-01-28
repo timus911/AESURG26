@@ -77,7 +77,13 @@
     "date": "23/01/26",
     "day": "Day 1",
     "speaker": "Dr. Paraskas",
-    "blocks": [],
+    "blocks": [
+      {
+        "type": "media_caption",
+        "file": "s00266-025-04661-x.pdf",
+        "caption": "Reference Article: V Plication Facelift"
+      }
+    ],
     "gallery": [],
     "tags": [
       "Facelift",
@@ -726,6 +732,11 @@
         "file": "VID-20260123-WA0152.mp4",
         "fileType": "video",
         "caption": "Video: Result and splinting."
+      },
+      {
+        "type": "media_caption",
+        "file": "266_2024_Article_3901.pdf",
+        "caption": "Reference Article: Trick Tip Rhinoplasty"
       }
     ],
     "gallery": [
@@ -1154,6 +1165,11 @@
         "file": "IMG-20260124-WA0034.jpg",
         "fileType": "image",
         "caption": "RAFT technique."
+      },
+      {
+        "type": "media_caption",
+        "file": "gox-11-e5499.pdf",
+        "caption": "Reference Article: Manzaneda Rib Reshaping"
       }
     ],
     "gallery": [],
